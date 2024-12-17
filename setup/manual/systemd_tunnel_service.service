@@ -1,0 +1,11 @@
+[Unit]
+Description=Script runs tunnel using Ngrok app
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ngrok http http://localhost:5000
+StandardOutput=inherit
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

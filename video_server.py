@@ -5,7 +5,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 libs_path = os.path.join(current_dir, 'libs')
 sys.path.insert(0, libs_path)
 
-import time
 import RPi.GPIO as GPIO
 from flask import Flask, Response, request
 from picamera2 import Picamera2

@@ -1,2 +1,6 @@
 libs/
-/libs
+.venv/
+
+*.pyc
+*.pyo
+.env
