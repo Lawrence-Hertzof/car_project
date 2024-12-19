@@ -61,18 +61,29 @@ app = Flask(__name__)
 
 # Initialize Picamera2
 picam2 = Picamera2()
-camera_config = picam2.create_preview_configuration(main={"size": (640, 480)})
+# 1280x720
+# camera_config = picam2.create_preview_configuration(main={"size": (640, 480)})
+camera_config = picam2.create_preview_configuration(main={"size": (1280, 720)})
 picam2.configure(camera_config)
 picam2.start()
+
+
+def _preprocess_frame(frame):
+        flipped_frame = cv2.flip(frame, -1)
+        corrected_frame = cv2.cvtColor(flipped_frame, cv2.COLOR_BGR2RGB)
+        return corrected_frame
+
 
 def generate_frames():
     """Generate frames from the Raspberry Pi camera."""
     while True:
         frame = picam2.capture_array()  # Get the current frame as a NumPy array
-        if os.environ.get("FLIPPED"):
-            frame = cv2.flip(frame, 0)
+        # flipped_frame = cv2.flip(frame, -1)
+        # # Convert from BGR to RGB
+        # corrected_image = cv2.cvtColor(flipped_frame, cv2.COLOR_BGR2RGB)
+        processed_frame = _preprocess_frame(frame)
         # Encode frame to JPEG
-        _, buffer = cv2.imencode('.jpg', frame)
+        _, buffer = cv2.imencode('.jpg', processed_frame)
         frame_bytes = buffer.tobytes()
 
         # Yield the frame as part of an MJPEG stream
@@ -86,21 +97,103 @@ def video_feed():
 
 @app.route('/')
 def index():
-    """Serve the main page with video and control buttons."""
-    return '''
+    # """Serve the main page with video and control buttons."""
+    # return '''
+    #     <html>
+    #     <head>
+    #         <title>Raspberry Pi Car</title>
+    #     </head>
+    #     <body>
+    #         <h1>Raspberry Pi Car Control</h1>
+    #         <img src="/video_feed" width="1280" height="720">
+    #         <br>
+    #         <button onclick="sendCommand('forward')">Forward</button>
+    #         <button onclick="sendCommand('backward')">Backward</button>
+    #         <button onclick="sendCommand('right')">RIGHT</button>
+    #         <button onclick="sendCommand('left')">LEFT</button>
+    #         <button onclick="sendCommand('stop')">Stop</button>
+    #         <script>
+    #             function sendCommand(command) {
+    #                 fetch(`/control?command=${command}`);
+    #             }
+    #         </script>
+    #     </body>
+    #     </html>
+    # '''
+        # """Serve the main page with video and control buttons."""
+    return """
         <html>
         <head>
             <title>Raspberry Pi Car</title>
+            <style>
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        margin: 0;
+        font-family: Arial, sans-serif;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    img {
+        max-width: 90%;
+        height: auto;
+        border: 2px solid #000;
+    }
+
+    .controls {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .horizontal {
+        display: flex;
+        gap: 10px;
+    }
+
+    button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 10px;
+    }
+
+    button img {
+        width: 50px;
+        height: 50px;
+    }
+</style>
+
         </head>
         <body>
             <h1>Raspberry Pi Car Control</h1>
-            <img src="/video_feed" width="640" height="480">
+            <img src="/video_feed" width="1280" height="720">
             <br>
-            <button onclick="sendCommand('forward')">Forward</button>
-            <button onclick="sendCommand('backward')">Backward</button>
-            <button onclick="sendCommand('right')">RIGHT</button>
-            <button onclick="sendCommand('left')">LEFT</button>
-            <button onclick="sendCommand('stop')">Stop</button>
+            <div></div>
+            <div class="controls">
+                <button onmousedown="sendCommand('forward')" onmouseup="sendCommand('stop')">
+                    <img src="/static/arrow-up.png" alt="Forward">
+                </button>
+                <div class="horizontal">
+                    <button onmousedown="sendCommand('left')" onmouseup="sendCommand('stop')">
+                        <img src="/static/arrow-left.png" alt="Left">
+                    </button>
+                    <button onmousedown="sendCommand('right')" onmouseup="sendCommand('stop')">
+                        <img src="/static/arrow-right.png" alt="Right">
+                    </button>
+                </div>
+                <button onmousedown="sendCommand('backward')" onmouseup="sendCommand('stop')">
+                    <img src="/static/arrow-down.png" alt="Backward">
+                </button>
+            </div>
             <script>
                 function sendCommand(command) {
                     fetch(`/control?command=${command}`);
@@ -108,7 +201,8 @@ def index():
             </script>
         </body>
         </html>
-    '''
+    """
+
 
 @app.route('/control')
 def control():
